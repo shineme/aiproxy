@@ -65,6 +65,7 @@ class RequestLogger:
         )
         
         self.db.add(log)
+        await self.db.flush()
         await self.db.commit()
         await self.db.refresh(log)
         
