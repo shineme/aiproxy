@@ -4,13 +4,16 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard
+from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard, proxy
+from app.services.scheduler import task_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    task_scheduler.start()
     yield
+    task_scheduler.shutdown()
 
 
 app = FastAPI(
@@ -27,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(proxy.router, tags=["proxy"])
 app.include_router(upstreams.router, prefix=f"{settings.API_V1_STR}/upstreams", tags=["upstreams"])
 app.include_router(api_keys.router, prefix=f"{settings.API_V1_STR}/keys", tags=["api-keys"])
 app.include_router(header_configs.router, prefix=f"{settings.API_V1_STR}/headers", tags=["headers"])
