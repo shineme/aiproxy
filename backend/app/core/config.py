@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     DEFAULT_CONNECTION_POOL_SIZE: int = 10
     
     MAX_SCRIPT_TIMEOUT_MS: int = 1000
+    ENABLE_PYTHON_SCRIPTS: bool = False
     
     class Config:
         env_file = ".env"

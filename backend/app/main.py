@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard, proxy, scripts, batch
+from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard, proxy, scripts, batch, auth
 from app.services.scheduler import task_scheduler
 
 
@@ -30,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(proxy.router, tags=["proxy"])
 app.include_router(upstreams.router, prefix=f"{settings.API_V1_STR}/upstreams", tags=["upstreams"])
 app.include_router(api_keys.router, prefix=f"{settings.API_V1_STR}/keys", tags=["api-keys"])

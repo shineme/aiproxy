@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any
 import asyncio
 import json
 import logging
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +38,21 @@ class ScriptExecutor:
                     mr.eval(f"var {key} = {json.dumps(value)};")
             
             timeout_seconds = self.timeout_ms / 1000
-            result = await asyncio.wait_for(
-                asyncio.to_thread(mr.eval, script),
-                timeout=timeout_seconds
-            )
+            
+            import sys
+            if sys.version_info >= (3, 9):
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(mr.eval, script),
+                    timeout=timeout_seconds
+                )
+            else:
+                import concurrent.futures
+                loop = asyncio.get_event_loop()
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(pool, mr.eval, script),
+                        timeout=timeout_seconds
+                    )
             
             return str(result) if result is not None else ""
             
@@ -69,6 +81,9 @@ class ScriptExecutor:
         Returns:
             脚本执行结果
         """
+        if not settings.ENABLE_PYTHON_SCRIPTS:
+            raise Exception("Python脚本执行功能未启用。请在配置中设置 ENABLE_PYTHON_SCRIPTS=True")
+        
         try:
             from RestrictedPython import compile_restricted
             from RestrictedPython.Guards import safe_builtins, safe_globals
@@ -95,7 +110,7 @@ class ScriptExecutor:
             
         except ImportError:
             logger.error("RestrictedPython not installed")
-            raise Exception("Python脚本执行功能未启用")
+            raise Exception("Python脚本执行功能需要安装 RestrictedPython 包")
         except Exception as e:
             logger.error(f"Python execution error: {e}")
             raise Exception(f"Python脚本执行失败: {str(e)}")
