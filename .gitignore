@@ -17,11 +17,13 @@ dist/
 # Environment
 .env
 .env.*
+!.env.example
 *.env.local
 
 # Logs
 *.log
-logs/
+/logs/
+backend/logs/
 
 # Editor
 .idea/
