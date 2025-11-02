@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard, proxy
+from app.api import upstreams, api_keys, header_configs, rules, request_logs, dashboard, proxy, scripts, batch
 from app.services.scheduler import task_scheduler
 
 
@@ -37,6 +37,8 @@ app.include_router(header_configs.router, prefix=f"{settings.API_V1_STR}/headers
 app.include_router(rules.router, prefix=f"{settings.API_V1_STR}/rules", tags=["rules"])
 app.include_router(request_logs.router, prefix=f"{settings.API_V1_STR}/logs", tags=["logs"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(scripts.router, prefix=f"{settings.API_V1_STR}/scripts", tags=["scripts"])
+app.include_router(batch.router, prefix=f"{settings.API_V1_STR}/batch", tags=["batch"])
 
 
 @app.get("/")

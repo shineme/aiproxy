@@ -15,6 +15,7 @@ const navigation = [
   { name: "请求头配置", href: "/headers", icon: "📝" },
   { name: "规则配置", href: "/rules", icon: "⚙️" },
   { name: "请求日志", href: "/logs", icon: "📋" },
+  { name: "脚本测试", href: "/scripts", icon: "🧪" },
 ]
 
 export function Layout({ children }: LayoutProps) {
