@@ -17,7 +17,7 @@ export const upstreamsApi = {
   delete: (id: number) => apiClient.delete(`/api/admin/upstreams/${id}`),
 }
 
-export const apiKeysApi = {
+export const keysApi = {
   list: (upstreamId?: number) => apiClient.get('/api/admin/keys', { params: { upstream_id: upstreamId } }),
   get: (id: number) => apiClient.get(`/api/admin/keys/${id}`),
   create: (data: any) => apiClient.post('/api/admin/keys', data),
@@ -27,7 +27,7 @@ export const apiKeysApi = {
   disable: (id: number) => apiClient.post(`/api/admin/keys/${id}/disable`),
 }
 
-export const headerConfigsApi = {
+export const headersApi = {
   list: (upstreamId?: number) => apiClient.get('/api/admin/headers', { params: { upstream_id: upstreamId } }),
   get: (id: number) => apiClient.get(`/api/admin/headers/${id}`),
   create: (data: any) => apiClient.post('/api/admin/headers', data),
@@ -53,5 +53,7 @@ export const dashboardApi = {
   stats: () => apiClient.get('/api/admin/dashboard/stats'),
   realtime: (limit?: number) => apiClient.get('/api/admin/dashboard/realtime', { params: { limit } }),
 }
+
+export * from '@/types'
 
 export default apiClient

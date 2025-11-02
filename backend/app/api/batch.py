@@ -239,6 +239,92 @@ async def batch_delete_keys(
     }
 
 
+@router.post("/keys/import-txt")
+async def import_keys_txt(
+    file: UploadFile = File(...),
+    upstream_id: int = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    从TXT文件批量导入密钥（每行一个密钥）
+    
+    支持以下格式：
+    1. 纯密钥值（每行一个）
+    2. 密钥名称:密钥值（用冒号分隔）
+    """
+    if not file.filename.endswith('.txt'):
+        raise HTTPException(status_code=400, detail="仅支持TXT文件")
+    
+    if not upstream_id:
+        raise HTTPException(status_code=400, detail="必须指定upstream_id")
+    
+    try:
+        result = await db.execute(
+            select(Upstream).where(Upstream.id == upstream_id)
+        )
+        upstream = result.scalar_one_or_none()
+        
+        if not upstream:
+            raise HTTPException(status_code=404, detail=f"上游ID {upstream_id} 不存在")
+        
+        content = await file.read()
+        text_content = content.decode('utf-8')
+        
+        lines = [line.strip() for line in text_content.split('\n') if line.strip()]
+        
+        success_count = 0
+        failed_count = 0
+        errors = []
+        
+        for idx, line in enumerate(lines, start=1):
+            try:
+                name = None
+                key_value = line
+                
+                if ':' in line:
+                    parts = line.split(':', 1)
+                    name = parts[0].strip()
+                    key_value = parts[1].strip()
+                
+                if not key_value:
+                    errors.append({
+                        "line": idx,
+                        "error": "密钥值为空"
+                    })
+                    failed_count += 1
+                    continue
+                
+                api_key = APIKey(
+                    upstream_id=upstream_id,
+                    name=name,
+                    key_value=key_value,
+                    location='header',
+                    param_name='Authorization',
+                    value_prefix='Bearer '
+                )
+                
+                db.add(api_key)
+                success_count += 1
+                
+            except Exception as e:
+                errors.append({
+                    "line": idx,
+                    "error": str(e)
+                })
+                failed_count += 1
+        
+        await db.commit()
+        
+        return {
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"导入失败: {str(e)}")
+
+
 @router.get("/template/keys-csv")
 async def get_csv_template():
     """获取CSV模板"""
@@ -253,3 +339,78 @@ async def get_csv_template():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=keys_template.csv"}
     )
+
+
+@router.get("/examples/curl")
+async def get_curl_examples():
+    """
+    获取API批量导入的CURL调用示例
+    """
+    return {
+        "json_import": {
+            "description": "通过JSON批量导入密钥",
+            "curl": """curl -X POST "http://localhost:8000/api/admin/batch/keys/import-json" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "upstream_id": 1,
+    "keys": [
+      {
+        "name": "Key 1",
+        "key_value": "sk-xxxxxxxxxx",
+        "location": "header",
+        "param_name": "Authorization",
+        "value_prefix": "Bearer ",
+        "enable_quota": true,
+        "quota_total": 1000
+      },
+      {
+        "name": "Key 2",
+        "key_value": "sk-yyyyyyyyyy",
+        "location": "header",
+        "param_name": "Authorization",
+        "value_prefix": "Bearer ",
+        "enable_quota": true,
+        "quota_total": 1000
+      }
+    ]
+  }'""",
+            "example_response": {
+                "success_count": 2,
+                "failed_count": 0,
+                "errors": []
+            }
+        },
+        "txt_import": {
+            "description": "通过TXT文件导入密钥（每行一个）",
+            "curl": """curl -X POST "http://localhost:8000/api/admin/batch/keys/import-txt?upstream_id=1" \\
+  -H "Content-Type: multipart/form-data" \\
+  -F "file=@keys.txt"
+  
+# keys.txt 文件内容示例：
+# sk-xxxxxxxxxx
+# sk-yyyyyyyyyy
+# Key3:sk-zzzzzzzzzz
+# Key4:sk-aaaaaaaaaa""",
+            "example_response": {
+                "success_count": 4,
+                "failed_count": 0,
+                "errors": []
+            }
+        },
+        "csv_import": {
+            "description": "通过CSV文件导入密钥",
+            "curl": """curl -X POST "http://localhost:8000/api/admin/batch/keys/import-csv" \\
+  -H "Content-Type: multipart/form-data" \\
+  -F "file=@keys.csv"
+  
+# CSV 文件格式：
+# upstream_id,name,key_value,location,param_name,value_prefix,enable_quota,quota_total
+# 1,Key 1,sk-xxxxxxxxxx,header,Authorization,Bearer ,true,1000
+# 1,Key 2,sk-yyyyyyyyyy,header,Authorization,Bearer ,true,1000""",
+            "example_response": {
+                "success_count": 2,
+                "failed_count": 0,
+                "errors": []
+            }
+        }
+    }
